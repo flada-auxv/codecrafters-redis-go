@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-
-	// Uncomment this block to pass the first stage
+	"io"
 	"net"
 	"os"
 )
@@ -17,28 +15,30 @@ func main() {
 	}
 
 	defer l.Close()
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
 
 	for {
-		s := bufio.NewScanner(conn)
-		s.Scan()
-		if err = s.Err(); err != nil {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	for {
+		buf := make([]byte, 1024)
+		_, err := conn.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
 			fmt.Println("Error while reading from connection", err.Error())
 			os.Exit(1)
 		}
-		fmt.Println("Received message:", s.Text())
 
-		// FIXME: Just sending "PONG" back in RESP format
-		w := bufio.NewWriter(conn)
-		fmt.Fprint(w, "+PONG\r\n")
-		err = w.Flush()
-		if err != nil {
-			fmt.Println("Error while writing to connection")
-			os.Exit(1)
-		}
+		conn.Write([]byte("+PONG\r\n"))
 	}
 }
