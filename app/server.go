@@ -29,118 +29,6 @@ func main() {
 	}
 }
 
-type RESP struct {
-	Count int
-	Data  []byte
-	Raw   []byte
-	Type  byte
-}
-
-const (
-	RESPArray        = '*'
-	RESPBulkString   = '$'
-	RESPError        = '-'
-	RESPInteger      = ':'
-	RESPSimpleString = '+'
-)
-
-// *2\r\n$4\r\nLLEN\r\n$6\r\nmylist\r\n
-
-// *2\r\n
-// $4\r\n
-// LLEN\r\n
-// $6\r\n
-// mylist\r\n
-
-// [RESP{*2}, RESP{$4:LLEN}, RESP{$6:mylist}]
-
-func scanCRLF(b []byte) int {
-	return bytes.Index(b, []byte("\r\n")) + 2
-}
-
-func Parse(b []byte) []RESP {
-	fmt.Printf("req: %#v\n", string(b))
-
-	lineNum := bytes.Count(b, []byte("\r\n"))
-	if lineNum == 0 {
-		panic("invalid format")
-	}
-
-	cursor := 0
-	resps := []RESP{}
-
-	for len(b) > 0 {
-		cursor = scanCRLF(b)
-		rawLine := b[0:cursor]
-
-		switch b[0] {
-		case RESPArray:
-			count, err := strconv.Atoi(string(b[1]))
-			if err != nil {
-				panic("TODO")
-			}
-			resps = append(resps, RESP{
-				Count: count,
-				Data:  b[cursor:], // FIXME: parse each of array elements
-				Raw:   b,
-				Type:  RESPArray,
-			})
-			b = b[cursor:]
-		case RESPBulkString:
-			count, err := strconv.Atoi(string(b[1]))
-			if err != nil {
-				panic("TODO")
-			}
-			resps = append(resps, RESP{
-				Count: count,
-				Data:  b[cursor : cursor+count],
-				Raw:   b[0 : cursor+count+2],
-				Type:  RESPBulkString,
-			})
-			b = b[cursor+count+2:]
-		case RESPSimpleString:
-			resps = append(resps, RESP{
-				Count: -1,
-				Data:  rawLine[1 : len(rawLine)-2],
-				Raw:   rawLine,
-				Type:  RESPSimpleString,
-			})
-			b = b[cursor:]
-		default:
-			panic("TODO")
-		}
-	}
-
-	return resps
-}
-
-func Exec(conn net.Conn, resps []RESP) {
-	if resps[0].Type != RESPArray {
-		panic("Currently, only array of bulk string is supported")
-	}
-
-	arr := resps[0]
-	cmd := resps[1]
-	augs := resps[2:2+arr.Count-1]
-
-	fmt.Println(fmt.Printf("cmd Data: %#v", string(cmd.Data)))
-
-	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
-	switch string(cmd.Data) {
-	case "ECHO", "echo":
-		message := []byte{}
-		for _, v := range augs {
-			message = append(message, v.Raw...)
-		}
-		fmt.Printf("message: %#v", string(message))
-		conn.Write(message)
-	case "PING", "ping":
-		conn.Write([]byte("+PONG\r\n"))
-	default:
-		panic("not implemented")
-	}
-}
-
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -156,5 +44,107 @@ func handleConnection(conn net.Conn) {
 		}
 
 		Exec(conn, Parse(bytes.Trim(buf, "\x00")))
+	}
+}
+
+type RESP struct {
+	Count int
+	Data  []byte
+	Raw   []byte
+	Type  byte
+}
+
+const (
+	RESPArray        = '*'
+	RESPBulkString   = '$'
+	RESPError        = '-'
+	RESPInteger      = ':'
+	RESPSimpleString = '+'
+)
+
+func scanCRLF(b []byte) int {
+	return bytes.Index(b, []byte("\r\n")) + 2
+}
+
+func Parse(b []byte) []RESP {
+
+	lineNum := bytes.Count(b, []byte("\r\n"))
+	if lineNum == 0 {
+		panic("invalid format")
+	}
+
+	resps := []RESP{}
+
+	for len(b) > 0 {
+		eol := scanCRLF(b)
+		rawLine := b[0:eol]
+
+		switch b[0] {
+		case RESPArray:
+			count, err := strconv.Atoi(string(b[1]))
+			if err != nil {
+				panic("TODO")
+			}
+			resps = append(resps, RESP{
+				Count: count,
+				Data:  b[eol:], // FIXME: parse each of array elements
+				Raw:   b,
+				Type:  RESPArray,
+			})
+			b = b[eol:]
+		case RESPBulkString:
+			count, err := strconv.Atoi(string(b[1]))
+			if err != nil {
+				panic("TODO")
+			}
+			resps = append(resps, RESP{
+				Count: count,
+				Data:  b[eol : eol+count],
+				Raw:   b[0 : eol+count+2],
+				Type:  RESPBulkString,
+			})
+			b = b[eol+count+2:]
+		case RESPError:
+			panic("TODO")
+		case RESPInteger:
+			panic("TODO")
+		case RESPSimpleString:
+			resps = append(resps, RESP{
+				Count: -1,
+				Data:  rawLine[1 : len(rawLine)-2],
+				Raw:   rawLine,
+				Type:  RESPSimpleString,
+			})
+			b = b[eol:]
+		default:
+			panic("TODO")
+		}
+	}
+
+	return resps
+}
+
+func Exec(conn net.Conn, resps []RESP) {
+	if resps[0].Type != RESPArray {
+		panic("Currently, only array of bulk string is supported")
+	}
+
+	// TODO: should be execed according to the type of first RESP
+	arr := resps[0]
+	cmd := resps[1]
+	augs := resps[2:2+arr.Count-1]
+
+	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
+	switch string(cmd.Data) {
+	case "ECHO", "echo":
+		message := []byte{}
+		for _, v := range augs {
+			message = append(message, v.Raw...)
+		}
+		conn.Write(message)
+	case "PING", "ping":
+		conn.Write([]byte("+PONG\r\n"))
+	default:
+		panic("not implemented")
 	}
 }
