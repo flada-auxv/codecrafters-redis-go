@@ -25,7 +25,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		handleConnection(conn)
+		go handleConnection(conn)
 	}
 }
 
@@ -58,24 +58,20 @@ func scanCRLF(b []byte) int {
 	return bytes.Index(b, []byte("\r\n")) + 2
 }
 
-func Tokenize(b []byte) []RESP {
+func Parse(b []byte) []RESP {
+	fmt.Printf("req: %#v\n", string(b))
+
 	lineNum := bytes.Count(b, []byte("\r\n"))
 	if lineNum == 0 {
 		panic("invalid format")
 	}
 
-	bSize := len(string(b))
 	cursor := 0
 	resps := []RESP{}
 
-	fmt.Printf("initial! buffer: %#v, size: %#v", string(b), bSize)
-
 	for len(b) > 0 {
-		fmt.Println(fmt.Sprintf("loop start! %#v", string(b)))
 		cursor = scanCRLF(b)
 		rawLine := b[0:cursor]
-
-		fmt.Println(fmt.Sprintf("cursor: %#v, rawLine: %#v", cursor, string(rawLine)))
 
 		switch b[0] {
 		case RESPArray:
@@ -86,10 +82,9 @@ func Tokenize(b []byte) []RESP {
 			resps = append(resps, RESP{
 				Count: count,
 				Data:  b[cursor:], // FIXME: parse each of array elements
-				Raw:   b[cursor:],
+				Raw:   b,
 				Type:  RESPArray,
 			})
-			fmt.Println(fmt.Sprintf("array! buf: %#v, next: %#v", string(b), string(b[cursor:])))
 			b = b[cursor:]
 		case RESPBulkString:
 			count, err := strconv.Atoi(string(b[1]))
@@ -99,7 +94,7 @@ func Tokenize(b []byte) []RESP {
 			resps = append(resps, RESP{
 				Count: count,
 				Data:  b[cursor : cursor+count],
-				Raw:   b[cursor : cursor+count+2],
+				Raw:   b[0 : cursor+count+2],
 				Type:  RESPBulkString,
 			})
 			b = b[cursor+count+2:]
@@ -112,12 +107,9 @@ func Tokenize(b []byte) []RESP {
 			})
 			b = b[cursor:]
 		default:
-			fmt.Printf("bSize: %+v, cursor: %+v, Type: %+v, Data: %+v, Raw: %+v\n", bSize, cursor, string(resps[0].Type), string(resps[0].Data), string(resps[0].Raw))
 			panic("TODO")
 		}
 	}
-
-	fmt.Println(fmt.Printf("resps: %#v", resps))
 
 	return resps
 }
@@ -131,17 +123,19 @@ func Exec(conn net.Conn, resps []RESP) {
 	cmd := resps[1]
 	augs := resps[2:2+arr.Count-1]
 
-	fmt.Println(fmt.Printf("cmd: %#v", string(cmd.Data)))
+	fmt.Println(fmt.Printf("cmd Data: %#v", string(cmd.Data)))
 
+	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
 	switch string(cmd.Data) {
-	case "ECHO":
+	case "ECHO", "echo":
 		message := []byte{}
 		for _, v := range augs {
 			message = append(message, v.Raw...)
 		}
+		fmt.Printf("message: %#v", string(message))
 		conn.Write(message)
-	case "PING":
-		conn.Write([]byte("PONG\r\n"))
+	case "PING", "ping":
+		conn.Write([]byte("+PONG\r\n"))
 	default:
 		panic("not implemented")
 	}
@@ -161,6 +155,6 @@ func handleConnection(conn net.Conn) {
 			os.Exit(1)
 		}
 
-		Exec(conn, Tokenize(bytes.Trim(buf, "\x00")))
+		Exec(conn, Parse(bytes.Trim(buf, "\x00")))
 	}
 }
