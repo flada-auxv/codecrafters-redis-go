@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"net"
 	"os"
 )
@@ -33,17 +31,8 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	for {
-		bufio.NewReader(conn)
-		buf := make([]byte, 1024)
-		_, err := conn.Read(buf)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			fmt.Println("Error while reading from connection", err.Error())
-			os.Exit(1)
-		}
-		resp, err := Parse(bytes.Trim(buf, "\x00"))
+		reader := bufio.NewReader(conn)
+		resp, err := Parse(reader)
 		if err != nil {
 			fmt.Println("Error while parsing request", err.Error())
 			os.Exit(1)
@@ -53,37 +42,18 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-type RESP struct {
-	Count int
-	Data  []byte
-	Raw   []byte
-	Type  byte
-}
-
-const (
-	RESPArray        = '*'
-	RESPBulkString   = '$'
-	RESPError        = '-'
-	RESPInteger      = ':'
-	RESPSimpleString = '+'
-)
-
 func exec(conn net.Conn, resps []RESP) {
 	if resps[0].Type != RESPArray {
 		panic("Currently, only array of bulk string is supported")
 	}
 
 	// TODO: should be execed according to the type of first RESP
-	arr := resps[0]
-	cmd := resps[1]
-	augs := resps[2 : 2+arr.Count-1]
-
 	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
-	switch string(cmd.Data) {
+	switch string(resps[0].Array[0].Data) {
 	case "ECHO", "echo":
 		message := []byte{}
-		for _, v := range augs {
-			message = append(message, v.Raw...)
+		for _, v := range resps[0].Array[1:] {
+			message = append(message, v.Data...)
 		}
 		conn.Write(message)
 	case "PING", "ping":

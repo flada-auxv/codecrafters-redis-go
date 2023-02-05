@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"reflect"
+	"strings"
 	"testing"
 )
 
 func TestParse(t *testing.T) {
 	type args struct {
-		b []byte
+		b *bufio.Reader
 	}
 	tests := []struct {
 		name    string
@@ -17,19 +19,21 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name: "Just a Simple String",
-			args: args{[]byte("+OK\r\n")},
+			args: args{bufio.NewReader(strings.NewReader("+OK\r\n"))},
 			want: []RESP{
-				{Type: '+', Count: -1, Data: []byte("OK"), Raw: []byte("+OK\r\n")},
+				{Type: '+', Count: -1, Data: []byte("OK")},
 			},
 			wantErr: false,
 		},
 		{
 			name: "ECHO command",
-			args: args{[]byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n")},
+			args: args{bufio.NewReader(strings.NewReader("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n"))},
 			want: []RESP{
-				{Type: '*', Count: 2, Data: []byte("$4\r\nECHO\r\n$3\r\nhey\r\n"), Raw: []byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n")},
-				{Type: '$', Count: 4, Data: []byte("ECHO"), Raw: []byte("$4\r\nECHO\r\n")},
-				{Type: '$', Count: 3, Data: []byte("hey"), Raw: []byte("$3\r\nhey\r\n")},
+				{Type: '*', Count: 2, Array: []RESP{
+					{Type: '$', Count: 4, Data: []byte("ECHO")},
+					{Type: '$', Count: 3, Data: []byte("hey")},
+				},
+				},
 			},
 			wantErr: false,
 		},
