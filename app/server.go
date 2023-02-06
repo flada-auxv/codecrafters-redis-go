@@ -65,7 +65,7 @@ func exec(conn net.Conn, store *Store, resps []RESP) {
 		for _, v := range args {
 			message = append(message, v.Data...)
 		}
-		conn.Write(message)
+		conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(message), string(message))))
 	case "GET", "get":
 		v, err := store.Get(string(args[0].Data))
 		if err != nil {
