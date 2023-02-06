@@ -17,7 +17,7 @@ func main() {
 
 	defer l.Close()
 
-	store := new(Store)
+	store := NewStore()
 
 	for {
 		conn, err := l.Accept()
