@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 )
@@ -34,6 +35,9 @@ func handleConnection(conn net.Conn, store *Store) {
 
 	for {
 		resps, err := Parse(bufio.NewReader(conn))
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			fmt.Println("Error while parsing request", err.Error())
 			os.Exit(1)
