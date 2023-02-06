@@ -16,6 +16,8 @@ func main() {
 
 	defer l.Close()
 
+	store := new(Store)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -23,39 +25,57 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, store)
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, store *Store) {
 	defer conn.Close()
 
 	for {
-		reader := bufio.NewReader(conn)
-		resp, err := Parse(reader)
+		resps, err := Parse(bufio.NewReader(conn))
 		if err != nil {
 			fmt.Println("Error while parsing request", err.Error())
 			os.Exit(1)
 		}
 
-		exec(conn, resp)
+		exec(conn, store, resps)
 	}
 }
 
-func exec(conn net.Conn, resps []RESP) {
+func exec(conn net.Conn, store *Store, resps []RESP) {
 	if resps[0].Type != RESPArray {
 		panic("Currently, only array of bulk string is supported")
 	}
 
 	// TODO: should be execed according to the type of first RESP
 	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
-	switch string(resps[0].Array[0].Data) {
+
+	respArr := resps[0]
+	cmd := respArr.Array[0]
+	args := respArr.Array[1:]
+
+	switch string(cmd.Data) {
 	case "ECHO", "echo":
 		message := []byte{}
-		for _, v := range resps[0].Array[1:] {
+		for _, v := range args {
 			message = append(message, v.Data...)
 		}
 		conn.Write(message)
+	case "GET", "get":
+		v, err := store.Get(string(args[0].Data))
+		if err != nil {
+			conn.Write([]byte("-ERR something wrong with GET"))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v)))
+	case "SET", "set":
+		err := store.Set(string(args[0].Data), string(args[1].Data))
+		if err != nil {
+			conn.Write([]byte("-ERR something wrong with SET"))
+			return
+		}
+		conn.Write([]byte("+OK\r\n"))
 	case "PING", "ping":
 		conn.Write([]byte("+PONG\r\n"))
 	default:

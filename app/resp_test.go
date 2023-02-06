@@ -26,6 +26,17 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "PING command",
+			args: args{bufio.NewReader(strings.NewReader("*1\r\n$4\r\nping\r\n"))},
+			want: []RESP{
+				{Type: '*', Count: 1, Array: []RESP{
+					{Type: '$', Count: 4, Data: []byte("ping")},
+				},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "ECHO command",
 			args: args{bufio.NewReader(strings.NewReader("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n"))},
 			want: []RESP{

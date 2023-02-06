@@ -93,7 +93,7 @@ func readLine(s *bufio.Reader) ([]byte, error) {
 	bytes := []byte{}
 
 	for {
-		b, err := s.ReadString('\n')
+		b, err := s.ReadBytes('\n')
 		if err != nil {
 			// does not end in '\n'
 			return nil, err
