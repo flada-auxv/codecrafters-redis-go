@@ -48,7 +48,6 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: false,
 		},
-
 		{
 			name: "nested array",
 			args: args{bufio.NewReader(strings.NewReader("*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n"))},
