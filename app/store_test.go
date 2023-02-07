@@ -16,7 +16,7 @@ func fakeNow() time.Time {
 
 func TestStore_Set(t *testing.T) {
 	t.Run("SET sets the v(alue) to the k(ey)", func(t *testing.T) {
-		s := NewStore(time.Now)
+		s := NewStore(fakeNow)
 
 		if gotErr := s.Set("testKey", "testValue"); gotErr != nil {
 			t.Errorf("got error: %#v", gotErr)
@@ -100,7 +100,7 @@ func TestStore_Get(t *testing.T) {
 
 func TestStore_SetWithExpiration(t *testing.T) {
 	t.Run("SET sets the v(alue) to the k(ey) with expiration", func(t *testing.T) {
-		s := NewStore(time.Now)
+		s := NewStore(fakeNow)
 
 		if gotErr := s.SetWithExpiration("testKey", "testValue", 10); gotErr != nil {
 			t.Errorf("got error: %#v", gotErr)
@@ -108,7 +108,7 @@ func TestStore_SetWithExpiration(t *testing.T) {
 		if s.store["testKey"].value != "testValue" {
 			t.Errorf("value is not set as expected")
 		}
-		if s.store["testKey"].expiredAt != fakeNow().Add(time.Second*10) {
+		if s.store["testKey"].expiredAt != fakeNow().Add(time.Millisecond*10) {
 			t.Errorf("expiredAt is not set as expected")
 		}
 	})
