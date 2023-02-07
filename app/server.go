@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 
 	defer l.Close()
 
-	store := NewStore()
+	store := NewStore(time.Now)
 
 	for {
 		conn, err := l.Accept()

@@ -6,7 +6,8 @@ import (
 )
 
 type Store struct {
-	store map[string]StoreValue
+	store map[string]*StoreValue
+	now   func() time.Time
 }
 
 type StoreValue struct {
@@ -14,35 +15,37 @@ type StoreValue struct {
 	value     string
 }
 
-func NewStore() *Store {
+func NewStore(now func() time.Time) *Store {
 	return &Store{
-		store: make(map[string]StoreValue),
+		store: make(map[string]*StoreValue),
+		now:   now,
 	}
 }
 
 func (s Store) Get(k string) (string, error) {
 	v, ok := s.store[k]
 	if !ok {
-		return "", errors.New("ERROR: Missing key.")
+		return "", nil
 	}
 
-	if !v.expiredAt.IsZero() && time.Now().After(v.expiredAt) {
-		v = StoreValue{}
-		return "", errors.New("ERROR: The key expired") // TODO: should it be returned with error??
+	if !v.expiredAt.IsZero() && s.now().After(v.expiredAt) {
+		v.expiredAt = time.Time{}
+		v.value = ""
+		return "", nil
 	}
 
 	return v.value, nil
 }
 
 func (s Store) Set(k string, v string) error {
-	s.store[k] = StoreValue{value: v, expiredAt: time.Time{}}
+	s.store[k] = &StoreValue{value: v, expiredAt: time.Time{}}
 	return nil
 }
 
-func (s Store) SetWithExpiration(k string, v string, expiration int) error {
-	if expiration > 1_000_000_000 {
-		return errors.New("ERROR: The expiration is too big.")
+func (s Store) SetWithExpiration(k string, v string, secondsToExpire int) error {
+	if secondsToExpire > 1_000_000_000 {
+		return errors.New("ERROR: The secondsToExpire is too big.")
 	}
-	s.store[k] = StoreValue{value: v, expiredAt: time.Now().Add(time.Second * time.Duration(expiration))}
+	s.store[k] = &StoreValue{value: v, expiredAt: s.now().Add(time.Second * time.Duration(secondsToExpire))}
 	return nil
 }
