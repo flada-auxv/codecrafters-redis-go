@@ -48,6 +48,25 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: false,
 		},
+
+		{
+			name: "nested array",
+			args: args{bufio.NewReader(strings.NewReader("*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n"))},
+			want: []RESP{
+				{Type: '*', Count: 2, Array: []RESP{
+					{Type: '*', Count: 3, Array: []RESP{
+						{Type: ':', Count: -1, Data: []byte("1")},
+						{Type: ':', Count: -1, Data: []byte("2")},
+						{Type: ':', Count: -1, Data: []byte("3")},
+					}},
+					{Type: '*', Count: 2, Array: []RESP{
+						{Type: '+', Count: -1, Data: []byte("Hello")},
+						{Type: '-', Count: -1, Data: []byte("World")},
+					}},
+				}},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

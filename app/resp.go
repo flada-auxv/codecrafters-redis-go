@@ -71,9 +71,17 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 			Type:  RESPBulkString,
 		})
 	case RESPError:
-		panic("TODO")
+		resps = append(resps, RESP{
+			Count: -1,
+			Data:  rawLine[1 : len(rawLine)-len(newLine)],
+			Type:  RESPError,
+		})
 	case RESPInteger:
-		panic("TODO")
+		resps = append(resps, RESP{
+			Count: -1,
+			Data:  rawLine[1 : len(rawLine)-len(newLine)],
+			Type:  RESPInteger,
+		})
 	case RESPSimpleString:
 		resps = append(resps, RESP{
 			Count: -1,
