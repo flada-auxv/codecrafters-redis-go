@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -70,14 +72,31 @@ func exec(conn net.Conn, store *Store, resps []RESP) {
 	case "GET", "get":
 		v, err := store.Get(string(args[0].Data))
 		if err != nil {
-			conn.Write([]byte("-ERR something wrong with GET"))
+			conn.Write([]byte(fmt.Sprintf("-ERR something wrong with GET. error: %#v", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v)))
+		if v == "" {
+			conn.Write([]byte(fmt.Sprintf("$%v\r\n", -1)))
+		} else {
+			conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v)))
+		}
 	case "SET", "set":
-		err := store.Set(string(args[0].Data), string(args[1].Data))
+		// TODO: just consider PX being passed, for now
+		var err error
+		if len(args) <= 2 {
+			err = store.Set(string(args[0].Data), string(args[1].Data))
+		} else {
+			if string(args[2].Data) != "PX" {
+				err = errors.New("ERROR: Unknown option")
+			}
+			milSec, errFromAtoi := strconv.Atoi(string(args[3].Data))
+			if errFromAtoi != nil {
+				err = errFromAtoi
+			}
+			err = store.SetWithExpiration(string(args[0].Data), string(args[1].Data), milSec)
+		}
 		if err != nil {
-			conn.Write([]byte("-ERR something wrong with SET"))
+			conn.Write([]byte(fmt.Sprintf("-ERR something wrong with SET. error: %#v", err)))
 			return
 		}
 		conn.Write([]byte("+OK\r\n"))

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -44,13 +43,9 @@ func (s Store) Set(k string, v string) error {
 }
 
 func (s Store) SetWithExpiration(k string, v string, milliSecsToExpire int) error {
-	fmt.Println("SetWithExpiration")
 	if milliSecsToExpire > 1_000_000_000 {
 		return errors.New("ERROR: The milliSecsToExpire is too big.")
 	}
 	s.store[k] = &StoreValue{value: v, expiredAt: s.now().Add(time.Millisecond * time.Duration(milliSecsToExpire))}
-	fmt.Println(s.store[k].value)
-	fmt.Println(s.store[k].expiredAt)
-	fmt.Println(time.Now())
 	return nil
 }
