@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	resp "codecrafters-redis-go/pkg/resp"
+	store "codecrafters-redis-go/pkg/store"
 	"errors"
 	"fmt"
 	"io"
@@ -20,7 +22,7 @@ func main() {
 
 	defer l.Close()
 
-	store := NewStore(time.Now)
+	store := store.NewStore(time.Now)
 
 	for {
 		conn, err := l.Accept()
@@ -33,11 +35,11 @@ func main() {
 	}
 }
 
-func handleConnection(conn net.Conn, store *Store) {
+func handleConnection(conn net.Conn, store *store.Store) {
 	defer conn.Close()
 
 	for {
-		resps, err := Parse(bufio.NewReader(conn))
+		resps, err := resp.Parse(bufio.NewReader(conn))
 		if err == io.EOF {
 			break
 		}
@@ -50,8 +52,8 @@ func handleConnection(conn net.Conn, store *Store) {
 	}
 }
 
-func exec(conn net.Conn, store *Store, resps []RESP) {
-	if resps[0].Type != RESPArray {
+func exec(conn net.Conn, store *store.Store, resps []resp.RESP) {
+	if resps[0].Type != resp.RESPArray {
 		panic("Currently, only array of bulk string is supported")
 	}
 

@@ -1,3 +1,3 @@
-module github.com/flada-auxv/codecrafters-redis-go/app
+module codecrafters-redis-go
 
 go 1.19
