@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -26,25 +27,32 @@ func main() {
 		panic("hi")
 	}
 
-	fmt.Println("aaa")
+	var line
 
 	for {
-		inputReader := bufio.NewReader(os.Stdin)
-		// TODO: not work
-		input, err := resp.Parse(inputReader)
-		if err != nil {
-			panic("hi")
+		stdinScanner := bufio.NewScanner(os.Stdin)
+		for stdinScanner.Scan() {
+			line := stdinScanner.Text()
+			fields := strings.Fields(line)
+			os.Stdin.
+
+			// TODO:
+			conn.Write([]byte{fmt.Sprintf("*1\r\n$%v\r\n%v\r\n", len(fields[0]), fields[0])},)
+
+			responseReader := bufio.NewReader(conn)
+			response, err := resp.Parse(responseReader)
+			if err != nil {
+				panic("hi")
+			}
+
+			for i, resp := range response {
+
+			}
+
 		}
+	}
 
-		// TODO: command
-		conn.Write([]byte("*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n"))
-
-		responseReader := bufio.NewReader(conn)
-		response, err := resp.Parse(responseReader)
-		if err != nil {
-			panic("hi")
-		}
-
-		fmt.Println(response)
+	for _, v := range response {
+		fmt.Printf("res: %#v\n", string(v.Data))
 	}
 }

@@ -118,3 +118,22 @@ func readLine(s *bufio.Reader) ([]byte, error) {
 func scanCRLF(b []byte) int {
 	return bytes.Index(b, []byte(newLine)) + len(newLine)
 }
+
+func (r RESP) ToString() string {
+	switch r.Type {
+	case RESPArray:
+		var str string
+		for i, v := range r.Array {
+			if i == 0 {
+				str = str + v.ToString()
+			} else {
+				str = str + " " + v.ToString()
+			}
+		}
+		return str
+	case RESPBulkString, RESPError, RESPInteger, RESPSimpleString:
+		return string(r.Data)
+	default:
+		return ""
+	}
+}
