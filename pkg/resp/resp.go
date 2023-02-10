@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -119,21 +120,14 @@ func scanCRLF(b []byte) int {
 	return bytes.Index(b, []byte(newLine)) + len(newLine)
 }
 
-func (r RESP) ToString() string {
-	switch r.Type {
-	case RESPArray:
-		var str string
-		for i, v := range r.Array {
-			if i == 0 {
-				str = str + v.ToString()
-			} else {
-				str = str + " " + v.ToString()
-			}
-		}
-		return str
-	case RESPBulkString, RESPError, RESPInteger, RESPSimpleString:
-		return string(r.Data)
-	default:
-		return ""
+func EncodeArray(array []string) []byte {
+	s := []byte(fmt.Sprintf("*%v\r\n", len(array)))
+	for _, v := range array {
+		s = append(s, []byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v))...)
 	}
+	return s
+}
+
+func EncodeBulkString(s string) []byte {
+	return []byte(fmt.Sprintf("$%v\r\n%v\r\n", len(s), s))
 }

@@ -27,17 +27,13 @@ func main() {
 		panic("hi")
 	}
 
-	var line
-
 	for {
 		stdinScanner := bufio.NewScanner(os.Stdin)
 		for stdinScanner.Scan() {
 			line := stdinScanner.Text()
 			fields := strings.Fields(line)
-			os.Stdin.
 
-			// TODO:
-			conn.Write([]byte{fmt.Sprintf("*1\r\n$%v\r\n%v\r\n", len(fields[0]), fields[0])},)
+			conn.Write(resp.EncodeArray(fields))
 
 			responseReader := bufio.NewReader(conn)
 			response, err := resp.Parse(responseReader)
@@ -45,14 +41,31 @@ func main() {
 				panic("hi")
 			}
 
-			for i, resp := range response {
+			// TODO: response[1:]
+			toSpaceSeparated(response[0])
 
+			for _, v := range response {
+				fmt.Printf("> %#v\n", string(v.Data))
 			}
-
 		}
 	}
+}
 
-	for _, v := range response {
-		fmt.Printf("res: %#v\n", string(v.Data))
+func toSpaceSeparated(r resp.RESP) string {
+	switch r.Type {
+	case resp.RESPArray:
+		var str string
+		for i, v := range r.Array {
+			if i == 0 {
+				str = str + toSpaceSeparated(v)
+			} else {
+				str = str + " " + toSpaceSeparated(v)
+			}
+		}
+		return str
+	case resp.RESPBulkString, resp.RESPError, resp.RESPInteger, resp.RESPSimpleString:
+		return string(r.Data)
+	default:
+		return ""
 	}
 }
