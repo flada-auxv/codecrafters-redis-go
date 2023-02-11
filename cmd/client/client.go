@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// ECHO hey
-// > hey
-
 func main() {
 	host := flag.String("h", "0.0.0.0", "Server hostname (default: 0.0.0.0)")
 	port := flag.String("p", "6379", "Server port (default: 6379)")
