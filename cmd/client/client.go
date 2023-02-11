@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"codecrafters-redis-go/pkg/resp"
 	"context"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -15,13 +16,15 @@ import (
 // > hey
 
 func main() {
+	host := flag.String("h", "0.0.0.0", "Server hostname (default: 0.0.0.0)")
+	port := flag.String("p", "6379", "Server port (default: 6379)")
+	flag.Parse()
+
 	dialer := net.Dialer{
 		Timeout: time.Second * 3,
 	}
 
-	// TODO: parse from command options
-	address := "0.0.0.0:6379"
-	conn, err := dialer.DialContext(context.TODO(), "tcp4", address)
+	conn, err := dialer.DialContext(context.TODO(), "tcp4", *host+":"+*port)
 	if err != nil {
 		fmt.Println(err.Error())
 		panic("hi")
