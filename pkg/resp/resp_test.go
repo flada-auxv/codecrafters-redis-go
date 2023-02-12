@@ -80,3 +80,51 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeArray(t *testing.T) {
+	type args struct {
+		array []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{
+			name: "hi",
+			args: args{[]string{"hi", "hey"}},
+			want: []byte("*2\r\n$2\r\nhi\r\n$3\r\nhey\r\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EncodeArray(tt.args.array); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("EncodeArray() = %#v, want %#v", string(got), string(tt.want))
+			}
+		})
+	}
+}
+
+func TestEncodeBulkString(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{
+			name: "hi",
+			args: args{"hi"},
+			want: []byte("$2\r\nhi\r\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EncodeBulkString(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("EncodeBulkString() = %#v, want %#v", string(got), string(tt.want))
+			}
+		})
+	}
+}

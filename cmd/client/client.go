@@ -39,7 +39,6 @@ func main() {
 
 			responseReader := bufio.NewReader(conn)
 			response, err := resp.Parse(responseReader)
-			fmt.Println(response)
 			if err != nil {
 				fmt.Printf("Error occurred. error: %v\r\n", err.Error())
 				continue

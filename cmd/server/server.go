@@ -81,6 +81,7 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 			message = append(message, v.Data...)
 		}
 		conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(message), string(message))))
+
 	case "GET", "get":
 		v, err := store.Get(string(args[0].Data))
 		if err != nil {
@@ -92,6 +93,7 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 		} else {
 			conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v)))
 		}
+
 	case "SET", "set":
 		// TODO: just consider PX being passed, for now
 		if len(args) <= 2 {
@@ -118,8 +120,10 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 		}
 
 		conn.Write(resp.EncodeSimpleString("OK"))
+
 	case "PING", "ping":
 		conn.Write(resp.EncodeSimpleString("PONG"))
+
 	default:
 		conn.Write(resp.EncodeError(errors.New("ERR not implemented command")))
 	}

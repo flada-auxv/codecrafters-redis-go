@@ -54,6 +54,7 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 			respArray.Array = append(respArray.Array, r...)
 		}
 		resps = append(resps, respArray)
+
 	case RESPBulkString:
 		count, err := strconv.Atoi(string(rawLine[1]))
 		if err != nil {
@@ -69,24 +70,28 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 			Data:  contentAndNewLine[:len(contentAndNewLine)-len(newLine)],
 			Type:  RESPBulkString,
 		})
+
 	case RESPError:
 		resps = append(resps, RESP{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPError,
 		})
+
 	case RESPInteger:
 		resps = append(resps, RESP{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPInteger,
 		})
+
 	case RESPSimpleString:
 		resps = append(resps, RESP{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPSimpleString,
 		})
+
 	default:
 		panic("TODO")
 	}
@@ -115,25 +120,26 @@ func readLine(s *bufio.Reader) ([]byte, error) {
 }
 
 func EncodeArray(array []string) []byte {
-	s := []byte(fmt.Sprintf("*%v\r\n", len(array)))
+	s := []byte(fmt.Sprint(string(RESPArray), len(array), newLine))
 	for _, v := range array {
-		s = append(s, []byte(fmt.Sprint(RESPArray, len(v), v))...)
+		// TODO: integer...?
+		s = append(s, EncodeBulkString(v)...)
 	}
 	return s
 }
 
 func EncodeBulkString(s string) []byte {
-	return []byte(fmt.Sprint(RESPBulkString, len(s), newLine, s, newLine))
+	return []byte(fmt.Sprint(string(RESPBulkString), len(s), newLine, s, newLine))
 }
 
 func EncodeError(e error) []byte {
-	return []byte(fmt.Sprint(RESPError, e.Error(), newLine))
+	return []byte(fmt.Sprint(string(RESPError), e.Error(), newLine))
 }
 
 func EncodeSimpleString(s string) []byte {
-	return []byte(fmt.Sprint(RESPSimpleString, s, newLine))
+	return []byte(fmt.Sprint(string(RESPSimpleString), s, newLine))
 }
 
 func EncodeInteger(i int) []byte {
-	return []byte(fmt.Sprint(RESPInteger, i, newLine))
+	return []byte(fmt.Sprint(string(RESPInteger), i, newLine))
 }
