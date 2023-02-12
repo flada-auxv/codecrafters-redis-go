@@ -5,24 +5,30 @@ import (
 	"time"
 )
 
-type Store struct {
-	store map[string]*StoreValue
+type Store interface {
+	Get(k string) (string, error)
+	Set(k string, v string) error
+	SetWithExpiration(k string, v string, milliSecsToExpire int) error
+}
+
+type MemoryStore struct {
+	store map[string]*MemoryStoreValue
 	now   func() time.Time
 }
 
-type StoreValue struct {
+type MemoryStoreValue struct {
 	expiredAt time.Time
 	value     string
 }
 
-func NewStore(now func() time.Time) *Store {
-	return &Store{
-		store: make(map[string]*StoreValue),
+func NewMemoryStore(now func() time.Time) *MemoryStore {
+	return &MemoryStore{
+		store: make(map[string]*MemoryStoreValue),
 		now:   now,
 	}
 }
 
-func (s Store) Get(k string) (string, error) {
+func (s MemoryStore) Get(k string) (string, error) {
 	v, ok := s.store[k]
 	if !ok {
 		return "", nil
@@ -37,15 +43,15 @@ func (s Store) Get(k string) (string, error) {
 	return v.value, nil
 }
 
-func (s Store) Set(k string, v string) error {
-	s.store[k] = &StoreValue{value: v, expiredAt: time.Time{}}
+func (s MemoryStore) Set(k string, v string) error {
+	s.store[k] = &MemoryStoreValue{value: v, expiredAt: time.Time{}}
 	return nil
 }
 
-func (s Store) SetWithExpiration(k string, v string, milliSecsToExpire int) error {
+func (s MemoryStore) SetWithExpiration(k string, v string, milliSecsToExpire int) error {
 	if milliSecsToExpire > 1_000_000_000 {
-		return errors.New("ERROR: The milliSecsToExpire is too big.")
+		return errors.New("ERROR: The milliSecsToExpire is too big")
 	}
-	s.store[k] = &StoreValue{value: v, expiredAt: s.now().Add(time.Millisecond * time.Duration(milliSecsToExpire))}
+	s.store[k] = &MemoryStoreValue{value: v, expiredAt: s.now().Add(time.Millisecond * time.Duration(milliSecsToExpire))}
 	return nil
 }

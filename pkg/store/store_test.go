@@ -16,7 +16,7 @@ func fakeNow() time.Time {
 
 func TestStore_Set(t *testing.T) {
 	t.Run("SET sets the v(alue) to the k(ey)", func(t *testing.T) {
-		s := NewStore(fakeNow)
+		s := NewMemoryStore(fakeNow)
 
 		if gotErr := s.Set("testKey", "testValue"); gotErr != nil {
 			t.Errorf("got error: %#v", gotErr)
@@ -32,7 +32,7 @@ func TestStore_Set(t *testing.T) {
 
 func TestStore_Get(t *testing.T) {
 	t.Run("GET gets the v(alue) at the k(ey)", func(t *testing.T) {
-		s := &Store{store: map[string]*StoreValue{"testKey": {value: "testValue"}}, now: fakeNow}
+		s := &MemoryStore{store: map[string]*MemoryStoreValue{"testKey": {value: "testValue"}}, now: fakeNow}
 		v, err := s.Get("testKey")
 
 		if err != nil {
@@ -44,7 +44,7 @@ func TestStore_Get(t *testing.T) {
 	})
 
 	t.Run("when no value is set for the key", func(t *testing.T) {
-		s := &Store{store: map[string]*StoreValue{"testKey": {value: "testValue"}}, now: fakeNow}
+		s := &MemoryStore{store: map[string]*MemoryStoreValue{"testKey": {value: "testValue"}}, now: fakeNow}
 		v, err := s.Get("theKeyWithNoValueSet")
 
 		if err != nil {
@@ -56,8 +56,8 @@ func TestStore_Get(t *testing.T) {
 	})
 
 	t.Run("when the value is expired", func(t *testing.T) {
-		s := &Store{
-			store: map[string]*StoreValue{"testKey": {value: "testValue", expiredAt: fakeNow().Add(time.Second * 10)}},
+		s := &MemoryStore{
+			store: map[string]*MemoryStoreValue{"testKey": {value: "testValue", expiredAt: fakeNow().Add(time.Second * 10)}},
 			now:   fakeNow,
 		}
 		v, err := s.Get("testKey")
@@ -100,7 +100,7 @@ func TestStore_Get(t *testing.T) {
 
 func TestStore_SetWithExpiration(t *testing.T) {
 	t.Run("SET sets the v(alue) to the k(ey) with expiration", func(t *testing.T) {
-		s := NewStore(fakeNow)
+		s := NewMemoryStore(fakeNow)
 
 		if gotErr := s.SetWithExpiration("testKey", "testValue", 10); gotErr != nil {
 			t.Errorf("got error: %#v", gotErr)
