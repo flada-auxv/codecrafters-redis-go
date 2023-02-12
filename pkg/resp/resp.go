@@ -46,7 +46,7 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 			Type:  RESPArray,
 		}
 
-		for i := 1; i <= count; i++ {
+		for i := 0; i < count; i++ {
 			r, err := Parse(s)
 			if err != nil {
 				return nil, err
