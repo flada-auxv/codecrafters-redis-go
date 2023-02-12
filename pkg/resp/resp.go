@@ -26,20 +26,19 @@ const (
 
 func Parse(s *bufio.Reader) ([]RESP, error) {
 	resps := []RESP{}
-
 	rawLine, err := readLine(s)
 	if err != nil {
 		if err == io.EOF {
 			return nil, err
 		}
-		return nil, errors.New("Invalid RESP format. It does not end in CRLF.")
+		return nil, errors.New("ERR Invalid RESP format. It does not end in CRLF")
 	}
 
 	switch rawLine[0] {
 	case RESPArray:
 		count, err := strconv.Atoi(string(rawLine[1]))
 		if err != nil {
-			return nil, errors.New("Invalid RESP format (Array): Invalid integer.")
+			return nil, errors.New("ERR Invalid RESP format (Array): Invalid integer")
 		}
 
 		respArray := RESP{
