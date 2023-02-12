@@ -5,37 +5,48 @@ import (
 	resp "codecrafters-redis-go/pkg/resp"
 	store "codecrafters-redis-go/pkg/store"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"time"
 )
 
+var Logger *log.Logger
+
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	// TODO: Allow writers to specific files specified in the config
+	Logger = log.New(os.Stdout, "codecrafters-redis-go", log.LstdFlags)
+
+	host := flag.String("h", "0.0.0.0", "Server hostname (default: 0.0.0.0)")
+	port := flag.String("p", "6379", "Server port (default: 6379)")
+	flag.Parse()
+
+	address := *host + ":" + *port
+
+	l, err := net.Listen("tcp", address)
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
-		os.Exit(1)
+		Logger.Fatalf("Failed to listen. address: %v\n", address)
 	}
 
 	defer l.Close()
 
-	store := store.NewStore(time.Now)
+	store := store.NewMemoryStore(time.Now)
 
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
+			Logger.Fatalf("Error accepting connection. error: %v\n", err.Error())
 		}
 
 		go handleConnection(conn, store)
 	}
 }
 
-func handleConnection(conn net.Conn, store *store.Store) {
+func handleConnection(conn net.Conn, store store.Store) {
 	defer conn.Close()
 
 	for {
@@ -44,15 +55,14 @@ func handleConnection(conn net.Conn, store *store.Store) {
 			break
 		}
 		if err != nil {
-			fmt.Println("Error while parsing request", err.Error())
-			os.Exit(1)
+			Logger.Fatalf("Error while parsing request. error: %v\n", err.Error())
 		}
 
 		exec(conn, store, resps)
 	}
 }
 
-func exec(conn net.Conn, store *store.Store, resps []resp.RESP) {
+func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 	if resps[0].Type != resp.RESPArray {
 		panic("Currently, only array of bulk string is supported")
 	}
@@ -84,27 +94,33 @@ func exec(conn net.Conn, store *store.Store, resps []resp.RESP) {
 		}
 	case "SET", "set":
 		// TODO: just consider PX being passed, for now
-		var err error
 		if len(args) <= 2 {
-			err = store.Set(string(args[0].Data), string(args[1].Data))
-		} else {
-			if string(args[2].Data) != "PX" {
-				err = errors.New("ERROR: Unknown option")
-			}
-			milSec, errFromAtoi := strconv.Atoi(string(args[3].Data))
-			if errFromAtoi != nil {
-				err = errFromAtoi
-			}
-			err = store.SetWithExpiration(string(args[0].Data), string(args[1].Data), milSec)
+			err := store.Set(string(args[0].Data), string(args[1].Data))
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR %v", err)))
+			return
 		}
+
+		if string(args[2].Data) != "PX" {
+			conn.Write(resp.EncodeError(errors.New("ERR unknown option for SET")))
+			return
+		}
+
+		milSec, errFromAtoi := strconv.Atoi(string(args[3].Data))
+		if errFromAtoi != nil {
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR %v", errFromAtoi)))
+			return
+		}
+
+		err := store.SetWithExpiration(string(args[0].Data), string(args[1].Data), milSec)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("-ERR something wrong with SET. error: %#v", err)))
 			return
 		}
-		conn.Write([]byte("+OK\r\n"))
+
+		conn.Write(resp.EncodeSimpleString("OK"))
 	case "PING", "ping":
-		conn.Write([]byte("+PONG\r\n"))
+		conn.Write(resp.EncodeSimpleString("PONG"))
 	default:
-		panic("not implemented")
+		conn.Write(resp.EncodeError(errors.New("ERR not implemented command")))
 	}
 }

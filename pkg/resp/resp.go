@@ -2,7 +2,6 @@ package resp
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -116,18 +115,26 @@ func readLine(s *bufio.Reader) ([]byte, error) {
 	return bytes, nil
 }
 
-func scanCRLF(b []byte) int {
-	return bytes.Index(b, []byte(newLine)) + len(newLine)
-}
-
 func EncodeArray(array []string) []byte {
 	s := []byte(fmt.Sprintf("*%v\r\n", len(array)))
 	for _, v := range array {
-		s = append(s, []byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v))...)
+		s = append(s, []byte(fmt.Sprint(RESPArray, len(v), v))...)
 	}
 	return s
 }
 
 func EncodeBulkString(s string) []byte {
-	return []byte(fmt.Sprintf("$%v\r\n%v\r\n", len(s), s))
+	return []byte(fmt.Sprint(RESPBulkString, len(s), newLine, s, newLine))
+}
+
+func EncodeError(e error) []byte {
+	return []byte(fmt.Sprint(RESPError, e.Error(), newLine))
+}
+
+func EncodeSimpleString(s string) []byte {
+	return []byte(fmt.Sprint(RESPSimpleString, s, newLine))
+}
+
+func EncodeInteger(i int) []byte {
+	return []byte(fmt.Sprint(RESPInteger, i, newLine))
 }

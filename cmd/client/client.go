@@ -21,14 +21,16 @@ func main() {
 		Timeout: time.Second * 3,
 	}
 
-	conn, err := dialer.DialContext(context.TODO(), "tcp4", *host+":"+*port)
+	address := *host + ":" + *port
+	conn, err := dialer.DialContext(context.TODO(), "tcp4", address)
 	if err != nil {
-		fmt.Println(err.Error())
-		panic("hi")
+		fmt.Fprintf(os.Stderr, "Failed to connect with the server. address: %v, error: %v", address, err.Error())
+		os.Exit(1)
 	}
 
 	for {
 		stdinScanner := bufio.NewScanner(os.Stdin)
+
 		for stdinScanner.Scan() {
 			line := stdinScanner.Text()
 			fields := strings.Fields(line)
@@ -37,15 +39,17 @@ func main() {
 
 			responseReader := bufio.NewReader(conn)
 			response, err := resp.Parse(responseReader)
+			fmt.Println(response)
 			if err != nil {
-				panic("hi")
+				fmt.Printf("Error occurred. error: %v\r\n", err.Error())
+				continue
 			}
 
 			// TODO: response[1:]
 			toSpaceSeparated(response[0])
 
 			for _, v := range response {
-				fmt.Printf("> %#v\n", string(v.Data))
+				fmt.Printf("> %v\n", string(v.Data))
 			}
 		}
 	}
