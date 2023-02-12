@@ -128,8 +128,16 @@ func EncodeArray(array []string) []byte {
 	return s
 }
 
+func EncodeNullArray() []byte {
+	return []byte(fmt.Sprint(string(RESPArray), -1, newLine))
+}
+
 func EncodeBulkString(s string) []byte {
 	return []byte(fmt.Sprint(string(RESPBulkString), len(s), newLine, s, newLine))
+}
+
+func EncodeNullBulkString() []byte {
+	return []byte(fmt.Sprint(string(RESPBulkString), -1, newLine))
 }
 
 func EncodeError(e error) []byte {
