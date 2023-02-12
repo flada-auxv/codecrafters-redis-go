@@ -76,29 +76,29 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 
 	switch string(cmd.Data) {
 	case "ECHO", "echo":
-		message := []byte{}
+		message := ""
 		for _, v := range args {
-			message = append(message, v.Data...)
+			message = message + string(v.Data)
 		}
-		conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(message), string(message))))
+		conn.Write(resp.EncodeBulkString(message))
 
 	case "GET", "get":
 		v, err := store.Get(string(args[0].Data))
 		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("-ERR something wrong with GET. error: %#v", err)))
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with GET. error: %v", err.Error())))
 			return
 		}
 		if v == "" {
 			conn.Write([]byte(fmt.Sprintf("$%v\r\n", -1)))
 		} else {
-			conn.Write([]byte(fmt.Sprintf("$%v\r\n%v\r\n", len(v), v)))
+			conn.Write(resp.EncodeBulkString(v))
 		}
 
 	case "SET", "set":
 		// TODO: just consider PX being passed, for now
 		if len(args) <= 2 {
 			err := store.Set(string(args[0].Data), string(args[1].Data))
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR %v", err)))
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with SET. error: %v", err.Error())))
 			return
 		}
 
@@ -109,13 +109,13 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 
 		milSec, errFromAtoi := strconv.Atoi(string(args[3].Data))
 		if errFromAtoi != nil {
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR %v", errFromAtoi)))
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR invalid opition value. error: %v", errFromAtoi)))
 			return
 		}
 
 		err := store.SetWithExpiration(string(args[0].Data), string(args[1].Data), milSec)
 		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("-ERR something wrong with SET. error: %#v", err)))
+			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with SET. error: %v", err.Error())))
 			return
 		}
 
