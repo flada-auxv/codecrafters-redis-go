@@ -6,13 +6,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
 	"time"
 )
 
+var Logger *log.Logger
+
 func main() {
+	// TODO: Allow writers to specific files specified in the config
+	Logger = log.New(os.Stdout, "codecrafters-redis-go", log.LstdFlags)
+
 	host := flag.String("h", "0.0.0.0", "Server hostname (default: 0.0.0.0)")
 	port := flag.String("p", "6379", "Server port (default: 6379)")
 	flag.Parse()
@@ -24,8 +30,7 @@ func main() {
 	address := *host + ":" + *port
 	conn, err := dialer.DialContext(context.TODO(), "tcp4", address)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect with the server. address: %v, error: %v", address, err.Error())
-		os.Exit(1)
+		Logger.Fatalf("Failed to connect with the server. address: %v, error: %v", address, err.Error())
 	}
 
 	for {
@@ -40,16 +45,15 @@ func main() {
 			responseReader := bufio.NewReader(conn)
 			response, err := resp.Parse(responseReader)
 			if err != nil {
-				fmt.Printf("Error occurred. error: %v\r\n", err.Error())
+				Logger.Printf("Error occurred. error: %v", err.Error())
+				continue
+			}
+			if len(response) > 1 {
+				Logger.Printf("Multiple RESPs in a response are not supported")
 				continue
 			}
 
-			// TODO: response[1:]
-			toSpaceSeparated(response[0])
-
-			for _, v := range response {
-				fmt.Printf("> %v\n", string(v.Data))
-			}
+			fmt.Fprintf(os.Stdout, "> %v\n", toSpaceSeparated(response[0]))
 		}
 	}
 }
@@ -66,8 +70,10 @@ func toSpaceSeparated(r resp.RESP) string {
 			}
 		}
 		return str
+
 	case resp.RESPBulkString, resp.RESPError, resp.RESPInteger, resp.RESPSimpleString:
 		return string(r.Data)
+
 	default:
 		return ""
 	}

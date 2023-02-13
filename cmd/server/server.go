@@ -77,8 +77,12 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 	switch string(cmd.Data) {
 	case "ECHO", "echo":
 		message := ""
-		for _, v := range args {
-			message = message + string(v.Data)
+		for i, v := range args {
+			if i == 0 {
+				message = message + string(v.Data)
+			} else {
+				message = message + " " + string(v.Data)
+			}
 		}
 		conn.Write(resp.EncodeBulkString(message))
 
