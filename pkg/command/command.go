@@ -3,6 +3,7 @@ package command
 import (
 	"codecrafters-redis-go/pkg/resp"
 	"codecrafters-redis-go/pkg/store"
+	"errors"
 	"net"
 )
 
@@ -48,19 +49,32 @@ func (c CmdPing) Run() error {
 
 type CmdEcho struct {
 	cmdCtx
-	opts CmdEchoOpts
+	opts *CmdEchoOpts
 }
 type CmdEchoOpts struct {
 	Value string
 }
 
-func NewCmdEcho(cmdCtx cmdCtx, opts CmdEchoOpts) *CmdEcho {
+func NewCmdEcho(cmdCtx cmdCtx, opts *CmdEchoOpts) *CmdEcho {
 	return &CmdEcho{
 		cmdCtx: cmdCtx,
 		opts:   opts,
 	}
 }
-func (c CmdEcho) Run() error {
+func NewCmdEchoOpts(r []resp.RESP) (*CmdEchoOpts, error) {
+	if len(r) != 1 {
+		return nil, errors.New("TODO: message")
+	}
+	if r[0].Type != resp.RESPBulkString {
+		return nil, errors.New("TODO: message")
+	}
+
+	return &CmdEchoOpts{
+		Value: string(r[0].Data),
+	}, nil
+}
+
+func (c *CmdEcho) Run() error {
 	c.cmdCtx.conn.Write(resp.EncodeBulkString(c.opts.Value))
 	return nil
 }

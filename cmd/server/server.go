@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"codecrafters-redis-go/pkg/command"
 	resp "codecrafters-redis-go/pkg/resp"
 	store "codecrafters-redis-go/pkg/store"
 	"errors"
@@ -73,18 +74,20 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 	respArr := resps[0]
 	cmd := respArr.Array[0]
 	args := respArr.Array[1:]
+	cmdCtx := command.NewCmdCtx(conn, store)
 
 	switch string(cmd.Data) {
 	case "ECHO", "echo":
-		message := ""
-		for i, v := range args {
-			if i == 0 {
-				message = message + string(v.Data)
-			} else {
-				message = message + " " + string(v.Data)
-			}
+		opts, err := command.NewCmdEchoOpts(args)
+		if err != nil {
+			writeError(err, conn)
+			return
 		}
-		conn.Write(resp.EncodeBulkString(message))
+		cmd := command.NewCmdEcho(cmdCtx, opts)
+		if err := cmd.Run(); err != nil {
+			writeError(err, conn)
+			return
+		}
 
 	case "GET", "get":
 		v, err := store.Get(string(args[0].Data))
@@ -131,4 +134,8 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 	default:
 		conn.Write(resp.EncodeError(errors.New("ERR not implemented command")))
 	}
+}
+
+func writeError(e error, conn net.Conn) {
+	conn.Write(resp.EncodeError(e))
 }
