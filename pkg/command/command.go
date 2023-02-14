@@ -51,7 +51,7 @@ type CmdEcho struct {
 	opts CmdEchoOpts
 }
 type CmdEchoOpts struct {
-	value string
+	Value string
 }
 
 func NewCmdEcho(cmdCtx cmdCtx, opts CmdEchoOpts) *CmdEcho {
@@ -61,8 +61,7 @@ func NewCmdEcho(cmdCtx cmdCtx, opts CmdEchoOpts) *CmdEcho {
 	}
 }
 func (c CmdEcho) Run() error {
-	v := c.opts.value
-	c.cmdCtx.conn.Write(resp.EncodeBulkString(v))
+	c.cmdCtx.conn.Write(resp.EncodeBulkString(c.opts.Value))
 	return nil
 }
 
@@ -71,7 +70,7 @@ type CmdGet struct {
 	opts CmdGetOpts
 }
 type CmdGetOpts struct {
-	key string
+	Key string
 }
 
 func NewCmdGet(cmdCtx cmdCtx, opts CmdGetOpts) *CmdGet {
@@ -81,7 +80,7 @@ func NewCmdGet(cmdCtx cmdCtx, opts CmdGetOpts) *CmdGet {
 	}
 }
 func (c CmdGet) Run() (string, error) {
-	v, err := c.cmdCtx.store.Get(c.opts.key)
+	v, err := c.cmdCtx.store.Get(c.opts.Key)
 	if err != nil {
 		return "", err
 	}
@@ -93,9 +92,9 @@ type CmdSet struct {
 	opts CmdSetOpts
 }
 type CmdSetOpts struct {
-	key        string
-	value      string
-	expiration int
+	Key        string
+	Value      string
+	Expiration int
 }
 
 func NewCmdSet(cmdCtx cmdCtx, opts CmdSetOpts) *CmdSet {
@@ -105,14 +104,14 @@ func NewCmdSet(cmdCtx cmdCtx, opts CmdSetOpts) *CmdSet {
 	}
 }
 func (c CmdSet) Run() error {
-	if c.opts.expiration == 0 {
-		err := c.cmdCtx.store.Set(c.opts.key, c.opts.value)
+	if c.opts.Expiration == 0 {
+		err := c.cmdCtx.store.Set(c.opts.Key, c.opts.Value)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := c.cmdCtx.store.SetWithExpiration(c.opts.key, c.opts.value, c.opts.expiration)
+	err := c.cmdCtx.store.SetWithExpiration(c.opts.Key, c.opts.Value, c.opts.Expiration)
 	if err != nil {
 		return err
 	}
