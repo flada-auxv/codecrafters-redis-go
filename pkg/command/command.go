@@ -7,10 +7,6 @@ import (
 	"net"
 )
 
-type command interface {
-	Run() error
-}
-
 type cmdCtx struct {
 	conn  net.Conn
 	store store.Store
@@ -25,25 +21,42 @@ func NewCmdCtx(c net.Conn, s store.Store) cmdCtx {
 
 type CmdPing struct {
 	cmdCtx
-	opts CmdPingOpts
+	opts *CmdPingOpts
 }
 type CmdPingOpts struct {
-	value string
+	Value string
 }
 
-func NewCmdPing(cmdCtx cmdCtx, opts CmdPingOpts) *CmdPing {
+func NewCmdPing(cmdCtx cmdCtx, opts *CmdPingOpts) *CmdPing {
 	return &CmdPing{
 		cmdCtx: cmdCtx,
 		opts:   opts,
 	}
 }
-func (c CmdPing) Run() error {
-	if c.opts.value == "" {
-		c.cmdCtx.conn.Write(resp.EncodeSimpleString("PONG"))
+func NewCmdPingOpts(r []resp.RESP) (*CmdPingOpts, error) {
+	if len(r) == 0 {
+		return &CmdPingOpts{
+			Value: "PONG",
+		}, nil
 	}
 
-	c.cmdCtx.conn.Write(resp.EncodeBulkString(c.opts.value))
+	if len(r) != 1 {
+		return nil, errors.New("ERR invalid argument length for PING")
+	}
+	if r[0].Type != resp.RESPBulkString {
+		return nil, errors.New("ERR invalid argument type for PING")
+	}
+	return &CmdPingOpts{
+		Value: string(r[0].Data),
+	}, nil
+}
+func (c CmdPing) Run() error {
+	if c.opts.Value == "" {
+		c.cmdCtx.conn.Write(resp.EncodeSimpleString("PONG"))
+		return nil
+	}
 
+	c.cmdCtx.conn.Write(resp.EncodeBulkString(c.opts.Value))
 	return nil
 }
 
@@ -63,10 +76,10 @@ func NewCmdEcho(cmdCtx cmdCtx, opts *CmdEchoOpts) *CmdEcho {
 }
 func NewCmdEchoOpts(r []resp.RESP) (*CmdEchoOpts, error) {
 	if len(r) != 1 {
-		return nil, errors.New("TODO: message")
+		return nil, errors.New("ERR invalid argument length for ECHO")
 	}
 	if r[0].Type != resp.RESPBulkString {
-		return nil, errors.New("TODO: message")
+		return nil, errors.New("ERR invalid argument type for ECHO")
 	}
 
 	return &CmdEchoOpts{

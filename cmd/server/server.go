@@ -129,7 +129,16 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 		conn.Write(resp.EncodeSimpleString("OK"))
 
 	case "PING", "ping":
-		conn.Write(resp.EncodeSimpleString("PONG"))
+		opts, err := command.NewCmdPingOpts(args)
+		if err != nil {
+			writeError(err, conn)
+			return
+		}
+		cmd := command.NewCmdPing(cmdCtx, opts)
+		if err := cmd.Run(); err != nil {
+			writeError(err, conn)
+			return
+		}
 
 	default:
 		conn.Write(resp.EncodeError(errors.New("ERR not implemented command")))
