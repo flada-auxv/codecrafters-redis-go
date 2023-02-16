@@ -35,6 +35,58 @@ func TestCmdEcho_Run(t *testing.T) {
 	})
 }
 
+func TestCmdPing_Run(t *testing.T) {
+	t.Run("It returns the PONG when no arguments are passed.", func(t *testing.T) {
+		mock := &mockConn{
+			mock: &bytes.Buffer{},
+		}
+		c := &CmdPing{
+			cmdCtx: cmdCtx{
+				conn:  mock,
+				store: store.NewMemoryStore(time.Now),
+			},
+			opts: &CmdPingOpts{},
+		}
+
+		if err := c.Run(); err != nil {
+			t.Errorf("err: %v", err)
+		}
+		bytes, err := io.ReadAll(mock)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		expected := "+PONG\r\n"
+		if string(bytes) != expected {
+			t.Errorf("The written value to conn is not as expected. got: %v, expected: %v", string(bytes), expected)
+		}
+	})
+
+	t.Run("It returns the value when an argument is passed like ECHO.", func(t *testing.T) {
+		mock := &mockConn{
+			mock: &bytes.Buffer{},
+		}
+		c := &CmdPing{
+			cmdCtx: cmdCtx{
+				conn:  mock,
+				store: store.NewMemoryStore(time.Now),
+			},
+			opts: &CmdPingOpts{Value: "hi there!"},
+		}
+
+		if err := c.Run(); err != nil {
+			t.Errorf("err: %v", err)
+		}
+		bytes, err := io.ReadAll(mock)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		expected := "$9\r\nhi there!\r\n"
+		if string(bytes) != expected {
+			t.Errorf("The written value to conn is not as expected. got: %v, expected: %v", string(bytes), expected)
+		}
+	})
+}
+
 type mockConn struct {
 	mock io.ReadWriter
 }
