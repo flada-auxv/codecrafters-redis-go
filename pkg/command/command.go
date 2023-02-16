@@ -5,6 +5,7 @@ import (
 	"codecrafters-redis-go/pkg/store"
 	"errors"
 	"net"
+	"strconv"
 )
 
 type cmdCtx struct {
@@ -132,7 +133,7 @@ func (c CmdGet) Run() error {
 
 type CmdSet struct {
 	cmdCtx
-	opts CmdSetOpts
+	opts *CmdSetOpts
 }
 type CmdSetOpts struct {
 	Key        string
@@ -140,11 +141,51 @@ type CmdSetOpts struct {
 	Expiration int
 }
 
-func NewCmdSet(cmdCtx cmdCtx, opts CmdSetOpts) *CmdSet {
+func NewCmdSet(cmdCtx cmdCtx, opts *CmdSetOpts) *CmdSet {
 	return &CmdSet{
 		cmdCtx: cmdCtx,
 		opts:   opts,
 	}
+}
+func NewCmdSetOpts(r []resp.RESP) (*CmdSetOpts, error) {
+	if len(r) < 2 {
+		return nil, errors.New("ERR invalid argument length for SET")
+	}
+	key := r[0]
+	value := r[1]
+	respOpts := r[2:]
+
+	if key.Type != resp.RESPBulkString || value.Type != resp.RESPBulkString {
+		return nil, errors.New("ERR invalid argument type for SET")
+	}
+
+	opts := &CmdSetOpts{
+		Key:   string(key.Data),
+		Value: string(value.Data),
+	}
+
+	for i := 0; i < len(respOpts); {
+		switch string(respOpts[i].Data) {
+		case "PX":
+			v := respOpts[i+1]
+			if v.Type != resp.RESPInteger {
+				return nil, errors.New("ERR invalid argument type for SET")
+			}
+			// TODO: Shouldn't it be checked when parsing to RESP objects...?
+			px, err := strconv.Atoi(string(v.Data))
+			if err != nil {
+				return nil, errors.New("ERR invalid argument type for SET")
+			}
+			opts.Expiration = px
+			i = i + 2
+		case "EX":
+			// TODO:
+		default:
+			return nil, errors.New("ERR invalid argument for SET")
+		}
+	}
+
+	return opts, nil
 }
 func (c CmdSet) Run() error {
 	if c.opts.Expiration == 0 {
@@ -152,12 +193,14 @@ func (c CmdSet) Run() error {
 		if err != nil {
 			return err
 		}
+		c.conn.Write(resp.EncodeSimpleString("OK"))
+		return nil
 	}
 
 	err := c.cmdCtx.store.SetWithExpiration(c.opts.Key, c.opts.Value, c.opts.Expiration)
 	if err != nil {
 		return err
 	}
-
+	c.conn.Write(resp.EncodeSimpleString("OK"))
 	return nil
 }

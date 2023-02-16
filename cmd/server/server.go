@@ -7,12 +7,10 @@ import (
 	store "codecrafters-redis-go/pkg/store"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -90,43 +88,28 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 		}
 
 	case "GET", "get":
-		v, err := store.Get(string(args[0].Data))
+		opts, err := command.NewCmdGetOpts(args)
 		if err != nil {
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with GET. error: %v", err.Error())))
+			writeError(err, conn)
 			return
 		}
-		if v == "" {
-			conn.Write([]byte(fmt.Sprintf("$%v\r\n", -1)))
-		} else {
-			conn.Write(resp.EncodeBulkString(v))
+		cmd := command.NewCmdGet(cmdCtx, opts)
+		if err := cmd.Run(); err != nil {
+			writeError(err, conn)
+			return
 		}
 
 	case "SET", "set":
-		// TODO: just consider PX being passed, for now
-		if len(args) <= 2 {
-			err := store.Set(string(args[0].Data), string(args[1].Data))
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with SET. error: %v", err.Error())))
-			return
-		}
-
-		if string(args[2].Data) != "PX" {
-			conn.Write(resp.EncodeError(errors.New("ERR unknown option for SET")))
-			return
-		}
-
-		milSec, errFromAtoi := strconv.Atoi(string(args[3].Data))
-		if errFromAtoi != nil {
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR invalid opition value. error: %v", errFromAtoi)))
-			return
-		}
-
-		err := store.SetWithExpiration(string(args[0].Data), string(args[1].Data), milSec)
+		opts, err := command.NewCmdSetOpts(args)
 		if err != nil {
-			conn.Write(resp.EncodeError(fmt.Errorf("ERR something wrong with SET. error: %v", err.Error())))
+			writeError(err, conn)
 			return
 		}
-
-		conn.Write(resp.EncodeSimpleString("OK"))
+		cmd := command.NewCmdSet(cmdCtx, opts)
+		if err := cmd.Run(); err != nil {
+			writeError(err, conn)
+			return
+		}
 
 	case "PING", "ping":
 		opts, err := command.NewCmdPingOpts(args)

@@ -109,8 +109,9 @@ func TestCmdGet_Run(t *testing.T) {
 		if err != nil {
 			t.Errorf("err: %v", err)
 		}
-		if string(bytes) != "$9\r\ntestValue\r\n" {
-			t.Errorf("The written value to conn is not as expected. value: %v", string(bytes))
+		expected := "$9\r\ntestValue\r\n"
+		if string(bytes) != expected {
+			t.Errorf("The written value to conn is not as expected. got: %v, expected: %v", string(bytes), expected)
 		}
 	})
 
@@ -135,8 +136,49 @@ func TestCmdGet_Run(t *testing.T) {
 		if err != nil {
 			t.Errorf("err: %v", err)
 		}
-		if string(bytes) != "$-1\r\n" {
-			t.Errorf("The written value to conn is not as expected. value: %v", string(bytes))
+		expected := "$-1\r\n"
+		if string(bytes) != expected {
+			t.Errorf("The written value to conn is not as expected. got: %v, exptected: %v", string(bytes), expected)
+		}
+	})
+}
+
+func TestCmdSet_Run(t *testing.T) {
+	t.Run("It set the value to the key with store", func(t *testing.T) {
+		mock := &mockConn{
+			mock: &bytes.Buffer{},
+		}
+		store := store.NewMemoryStore(time.Now)
+		store.Set("testKey", "testValue")
+		c := &CmdSet{
+			cmdCtx: cmdCtx{
+				conn:  mock,
+				store: store,
+			},
+			opts: &CmdSetOpts{
+				Key:   "testKey",
+				Value: "hi there!",
+			},
+		}
+
+		if err := c.Run(); err != nil {
+			t.Errorf("err: %v", err)
+		}
+		bytes, err := io.ReadAll(mock)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		expectedToWrite := "+OK\r\n"
+		if string(bytes) != expectedToWrite {
+			t.Errorf("The written value to conn is not as expected. got: %v, expected: %v", string(bytes), expectedToWrite)
+		}
+		got, err := store.Get("testKey")
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		expectedToStore := "hi there!"
+		if got != expectedToStore {
+			t.Errorf("The written value to store is not as expected. got: %v, expected: %v", string(got), expectedToStore)
 		}
 	})
 }
