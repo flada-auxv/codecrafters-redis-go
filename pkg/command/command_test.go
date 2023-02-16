@@ -87,6 +87,60 @@ func TestCmdPing_Run(t *testing.T) {
 	})
 }
 
+func TestCmdGet_Run(t *testing.T) {
+	t.Run("It gets the value from store.", func(t *testing.T) {
+		mock := &mockConn{
+			mock: &bytes.Buffer{},
+		}
+		store := store.NewMemoryStore(time.Now)
+		store.Set("testKey", "testValue")
+		c := &CmdGet{
+			cmdCtx: cmdCtx{
+				conn:  mock,
+				store: store,
+			},
+			opts: &CmdGetOpts{Key: "testKey"},
+		}
+
+		if err := c.Run(); err != nil {
+			t.Errorf("err: %v", err)
+		}
+		bytes, err := io.ReadAll(mock)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		if string(bytes) != "$9\r\ntestValue\r\n" {
+			t.Errorf("The written value to conn is not as expected. value: %v", string(bytes))
+		}
+	})
+
+	t.Run("It gets the null bulk string when the key does not exist", func(t *testing.T) {
+		mock := &mockConn{
+			mock: &bytes.Buffer{},
+		}
+		store := store.NewMemoryStore(time.Now)
+		store.Set("testKey", "testValue")
+		c := &CmdGet{
+			cmdCtx: cmdCtx{
+				conn:  mock,
+				store: store,
+			},
+			opts: &CmdGetOpts{Key: "testKeyDoesNotExist"},
+		}
+
+		if err := c.Run(); err != nil {
+			t.Errorf("err: %v", err)
+		}
+		bytes, err := io.ReadAll(mock)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+		if string(bytes) != "$-1\r\n" {
+			t.Errorf("The written value to conn is not as expected. value: %v", string(bytes))
+		}
+	})
+}
+
 type mockConn struct {
 	mock io.ReadWriter
 }
