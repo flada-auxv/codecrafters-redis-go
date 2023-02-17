@@ -66,6 +66,22 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Null Bulk String",
+			args: args{bufio.NewReader(strings.NewReader("$-1\r\n"))},
+			want: []RESP{{
+				Type: '$', Count: -1, Data: []byte(""),
+			}},
+			wantErr: false,
+		},
+		{
+			name: "Not to short Bulk String",
+			args: args{bufio.NewReader(strings.NewReader("$52\r\nSo, what do you wanna do, what's your point-of-view?\r\n"))},
+			want: []RESP{{
+				Type: '$', Count: 52, Data: []byte("So, what do you wanna do, what's your point-of-view?"),
+			}},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

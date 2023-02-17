@@ -56,9 +56,19 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 		resps = append(resps, respArray)
 
 	case RESPBulkString:
-		count, err := strconv.Atoi(string(rawLine[1]))
+		count, err := strconv.Atoi(string(rawLine[1 : len(rawLine)-len(newLine)]))
 		if err != nil {
 			return nil, errors.New("ERR Invalid RESP format (BulkString): Invalid integer")
+		}
+
+		if count == -1 {
+			resps = append(resps, RESP{
+				Count: -1,
+				Data:  []byte{},
+				Type:  RESPBulkString,
+			})
+			// TODO
+			return resps, nil
 		}
 
 		contentAndNewLine := make([]byte, count+len(newLine))
