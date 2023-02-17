@@ -25,7 +25,6 @@ const (
 )
 
 func Parse(s *bufio.Reader) ([]RESP, error) {
-	resps := []RESP{}
 	rawLine, err := readLine(s)
 	if err != nil {
 		if err == io.EOF {
@@ -53,7 +52,8 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 			}
 			respArray.Array = append(respArray.Array, r...)
 		}
-		resps = append(resps, respArray)
+
+		return []RESP{respArray}, nil
 
 	case RESPBulkString:
 		count, err := strconv.Atoi(string(rawLine[1 : len(rawLine)-len(newLine)]))
@@ -62,51 +62,48 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 		}
 
 		if count == -1 {
-			resps = append(resps, RESP{
+			return []RESP{{
 				Count: -1,
 				Data:  []byte{},
 				Type:  RESPBulkString,
-			})
-			// TODO
-			return resps, nil
+			}}, nil
 		}
 
 		contentAndNewLine := make([]byte, count+len(newLine))
 		if _, err := io.ReadFull(s, contentAndNewLine); err != nil {
 			return nil, errors.New("ERR Invalid RESP format (BulkString): Wrong content size")
 		}
-		resps = append(resps, RESP{
+
+		return []RESP{{
 			Count: count,
 			Data:  contentAndNewLine[:len(contentAndNewLine)-len(newLine)],
 			Type:  RESPBulkString,
-		})
+		}}, nil
 
 	case RESPError:
-		resps = append(resps, RESP{
+		return []RESP{{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPError,
-		})
+		}}, nil
 
 	case RESPInteger:
-		resps = append(resps, RESP{
+		return []RESP{{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPInteger,
-		})
+		}}, nil
 
 	case RESPSimpleString:
-		resps = append(resps, RESP{
+		return []RESP{{
 			Count: -1,
 			Data:  rawLine[1 : len(rawLine)-len(newLine)],
 			Type:  RESPSimpleString,
-		})
+		}}, nil
 
 	default:
 		return nil, errors.New("ERR RESP data type (the first byte) is invalid")
 	}
-
-	return resps, nil
 }
 
 func readLine(s *bufio.Reader) ([]byte, error) {
