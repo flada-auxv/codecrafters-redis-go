@@ -103,7 +103,7 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 		})
 
 	default:
-		panic("TODO")
+		return nil, errors.New("ERR RESP data type (the first byte) is invalid")
 	}
 
 	return resps, nil
