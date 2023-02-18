@@ -33,40 +33,40 @@ func main() {
 		Logger.Fatalf("Failed to connect with the server. address: %v, error: %v", address, err.Error())
 	}
 
-	for {
-		stdinScanner := bufio.NewScanner(os.Stdin)
+	fmt.Fprintf(os.Stdout, "%v>", address)
 
-		for stdinScanner.Scan() {
-			line := stdinScanner.Text()
-			fields := strings.Fields(line)
+	stdinScanner := bufio.NewScanner(os.Stdin)
+	for stdinScanner.Scan() {
+		line := stdinScanner.Text()
+		fields := strings.Fields(line)
 
-			conn.Write(resp.EncodeArray(fields))
+		conn.Write(resp.EncodeArray(fields))
 
-			responseReader := bufio.NewReader(conn)
-			response, err := resp.Parse(responseReader)
-			if err != nil {
-				Logger.Printf("Error occurred. error: %v", err.Error())
-				continue
-			}
-			if len(response) > 1 {
-				Logger.Printf("Multiple RESPs in a response are not supported")
-				continue
-			}
-
-			fmt.Fprintf(os.Stdout, "> %v\n", toSpaceSeparated(response[0]))
+		responseReader := bufio.NewReader(conn)
+		response, err := resp.Parse(responseReader)
+		if err != nil {
+			Logger.Printf("Error occurred. error: %v", err.Error())
+			continue
 		}
+		if len(response) > 1 {
+			Logger.Printf("Multiple RESPs in a response are not supported")
+			continue
+		}
+
+		fmt.Fprintf(os.Stdout, "%v\n", toReadable(response[0]))
+		fmt.Fprintf(os.Stdout, "%v>", address)
 	}
 }
 
-func toSpaceSeparated(r resp.RESP) string {
+func toReadable(r resp.RESP) string {
 	switch r.Type {
 	case resp.RESPArray:
 		var str string
 		for i, v := range r.Array {
 			if i == 0 {
-				str = str + toSpaceSeparated(v)
+				str = str + toReadable(v)
 			} else {
-				str = str + " " + toSpaceSeparated(v)
+				str = str + " " + toReadable(v)
 			}
 		}
 		return str
