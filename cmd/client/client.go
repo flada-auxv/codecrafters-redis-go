@@ -19,7 +19,7 @@ func main() {
 	// TODO: Allow writers to specific files specified in the config
 	Logger = log.New(os.Stdout, "codecrafters-redis-go", log.LstdFlags)
 
-	host := flag.String("h", "0.0.0.0", "Server hostname (default: 0.0.0.0)")
+	host := flag.String("h", "127.0.0.1", "Server hostname (default: 127.0.0.1)")
 	port := flag.String("p", "6379", "Server port (default: 6379)")
 	flag.Parse()
 
