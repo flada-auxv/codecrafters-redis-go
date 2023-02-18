@@ -61,17 +61,34 @@ func main() {
 func toReadable(r resp.RESP) string {
 	switch r.Type {
 	case resp.RESPArray:
+		if len(r.Array) == 0 {
+			return "(empty array)"
+		}
+
 		var str string
 		for i, v := range r.Array {
+			header := fmt.Sprintf("%v)", i+1)
 			if i == 0 {
-				str = str + toReadable(v)
+				str = header + " " + toReadable(v)
 			} else {
-				str = str + " " + toReadable(v)
+				str = str + "\n" + header + " " + toReadable(v)
 			}
 		}
 		return str
 
-	case resp.RESPBulkString, resp.RESPError, resp.RESPInteger, resp.RESPSimpleString:
+	case resp.RESPBulkString:
+		if string(r.Data) == "" {
+			return "(nil)"
+		}
+		return "\"" + string(r.Data) + "\""
+
+	case resp.RESPError:
+		return "(error) " + string(r.Data)
+
+	case resp.RESPInteger:
+		return "(integer) " + string(r.Data)
+
+	case resp.RESPSimpleString:
 		return string(r.Data)
 
 	default:
