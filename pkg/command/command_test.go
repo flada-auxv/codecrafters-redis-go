@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"codecrafters-redis-go/pkg/resp"
 	"codecrafters-redis-go/pkg/store"
 	"io"
 	"net"
@@ -14,12 +15,10 @@ func TestCmdEcho_Run(t *testing.T) {
 		mock := &mockConn{
 			mock: &bytes.Buffer{},
 		}
-		c := &CmdEcho{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store.NewMemoryStore(time.Now),
-			},
-			opts: &CmdEchoOpts{Value: "hi"},
+		ctx := NewCmdCtx(mock, store.NewMemoryStore(time.Now))
+		c, err := GetCmd(ctx, "ECHO", []resp.RESP{{Data: []byte("hi"), Type: resp.RESPBulkString}})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {
@@ -40,12 +39,10 @@ func TestCmdPing_Run(t *testing.T) {
 		mock := &mockConn{
 			mock: &bytes.Buffer{},
 		}
-		c := &CmdPing{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store.NewMemoryStore(time.Now),
-			},
-			opts: &CmdPingOpts{},
+		ctx := NewCmdCtx(mock, store.NewMemoryStore(time.Now))
+		c, err := GetCmd(ctx, "PING", []resp.RESP{})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {
@@ -65,12 +62,10 @@ func TestCmdPing_Run(t *testing.T) {
 		mock := &mockConn{
 			mock: &bytes.Buffer{},
 		}
-		c := &CmdPing{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store.NewMemoryStore(time.Now),
-			},
-			opts: &CmdPingOpts{Value: "hi there!"},
+		ctx := NewCmdCtx(mock, store.NewMemoryStore(time.Now))
+		c, err := GetCmd(ctx, "PING", []resp.RESP{{Data: []byte("hi there!"), Type: resp.RESPBulkString}})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {
@@ -94,12 +89,10 @@ func TestCmdGet_Run(t *testing.T) {
 		}
 		store := store.NewMemoryStore(time.Now)
 		store.Set("testKey", "testValue")
-		c := &CmdGet{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store,
-			},
-			opts: &CmdGetOpts{Key: "testKey"},
+		ctx := NewCmdCtx(mock, store)
+		c, err := GetCmd(ctx, "GET", []resp.RESP{{Data: []byte("testKey"), Type: resp.RESPBulkString}})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {
@@ -121,12 +114,10 @@ func TestCmdGet_Run(t *testing.T) {
 		}
 		store := store.NewMemoryStore(time.Now)
 		store.Set("testKey", "testValue")
-		c := &CmdGet{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store,
-			},
-			opts: &CmdGetOpts{Key: "testKeyDoesNotExist"},
+		ctx := NewCmdCtx(mock, store)
+		c, err := GetCmd(ctx, "GET", []resp.RESP{{Data: []byte("testKeyDoesNotExist"), Type: resp.RESPBulkString}})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {
@@ -150,15 +141,13 @@ func TestCmdSet_Run(t *testing.T) {
 		}
 		store := store.NewMemoryStore(time.Now)
 		store.Set("testKey", "testValue")
-		c := &CmdSet{
-			cmdCtx: cmdCtx{
-				conn:  mock,
-				store: store,
-			},
-			opts: &CmdSetOpts{
-				Key:   "testKey",
-				Value: "hi there!",
-			},
+		ctx := NewCmdCtx(mock, store)
+		c, err := GetCmd(ctx, "SET", []resp.RESP{
+			{Data: []byte("testKey"), Type: resp.RESPBulkString},
+			{Data: []byte("hi there!"), Type: resp.RESPBulkString},
+		})
+		if err != nil {
+			t.Errorf("err: %v", err)
 		}
 
 		if err := c.Run(); err != nil {

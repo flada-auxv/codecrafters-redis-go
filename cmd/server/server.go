@@ -5,7 +5,6 @@ import (
 	"codecrafters-redis-go/pkg/command"
 	resp "codecrafters-redis-go/pkg/resp"
 	store "codecrafters-redis-go/pkg/store"
-	"errors"
 	"flag"
 	"io"
 	"log"
@@ -63,68 +62,23 @@ func handleConnection(conn net.Conn, store store.Store) {
 }
 
 func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
-	if resps[0].Type != resp.RESPArray {
-		panic("Currently, only array of bulk string is supported")
+	if resps[0].Type != resp.RESPArray || len(resps) != 1 {
+		Logger.Printf("Currently, only an Array is supported.")
+		return
 	}
 
-	// TODO: should be execed according to the type of first RESP
-
-	respArr := resps[0]
-	cmd := respArr.Array[0]
-	args := respArr.Array[1:]
 	cmdCtx := command.NewCmdCtx(conn, store)
+	cmdType := resps[0].Array[0].Data
+	args := resps[0].Array[1:]
+	c, err := command.GetCmd(cmdCtx, string(cmdType), args)
+	if err != nil {
+		writeError(err, conn)
+		return
+	}
 
-	switch string(cmd.Data) {
-	case "ECHO", "echo":
-		opts, err := command.NewCmdEchoOpts(args)
-		if err != nil {
-			writeError(err, conn)
-			return
-		}
-		cmd := command.NewCmdEcho(cmdCtx, opts)
-		if err := cmd.Run(); err != nil {
-			writeError(err, conn)
-			return
-		}
-
-	case "GET", "get":
-		opts, err := command.NewCmdGetOpts(args)
-		if err != nil {
-			writeError(err, conn)
-			return
-		}
-		cmd := command.NewCmdGet(cmdCtx, opts)
-		if err := cmd.Run(); err != nil {
-			writeError(err, conn)
-			return
-		}
-
-	case "SET", "set":
-		opts, err := command.NewCmdSetOpts(args)
-		if err != nil {
-			writeError(err, conn)
-			return
-		}
-		cmd := command.NewCmdSet(cmdCtx, opts)
-		if err := cmd.Run(); err != nil {
-			writeError(err, conn)
-			return
-		}
-
-	case "PING", "ping":
-		opts, err := command.NewCmdPingOpts(args)
-		if err != nil {
-			writeError(err, conn)
-			return
-		}
-		cmd := command.NewCmdPing(cmdCtx, opts)
-		if err := cmd.Run(); err != nil {
-			writeError(err, conn)
-			return
-		}
-
-	default:
-		conn.Write(resp.EncodeError(errors.New("ERR not implemented command")))
+	if err := c.Run(); err != nil {
+		writeError(err, conn)
+		return
 	}
 }
 
