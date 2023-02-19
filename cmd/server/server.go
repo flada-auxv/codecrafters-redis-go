@@ -28,7 +28,7 @@ func main() {
 
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		Logger.Fatalf("Failed to listen. address: %v\n", address)
+		Logger.Fatalf("Failed to listen. address: %v", address)
 	}
 
 	defer l.Close()
@@ -38,7 +38,7 @@ func main() {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			Logger.Fatalf("Error accepting connection. error: %v\n", err.Error())
+			Logger.Fatalf("Error accepting connection. error: %v", err)
 		}
 
 		go handleConnection(conn, store)
@@ -54,7 +54,8 @@ func handleConnection(conn net.Conn, store store.Store) {
 			break
 		}
 		if err != nil {
-			Logger.Fatalf("Error while parsing request. error: %v\n", err.Error())
+			Logger.Printf("Error while parsing request. error: %v", err)
+			continue
 		}
 
 		exec(conn, store, resps)
@@ -67,7 +68,6 @@ func exec(conn net.Conn, store store.Store, resps []resp.RESP) {
 	}
 
 	// TODO: should be execed according to the type of first RESP
-	// TODO: The redis command group seems to be case insensitive and uses uppercase, but the codecrafters send it in lowercase...?
 
 	respArr := resps[0]
 	cmd := respArr.Array[0]
