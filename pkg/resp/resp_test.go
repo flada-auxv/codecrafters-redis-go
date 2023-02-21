@@ -26,6 +26,19 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Just a simple Integer",
+			args: args{bufio.NewReader(strings.NewReader(":1000\r\n"))},
+			want: []RESP{
+				{Type: ':', Count: -1, Data: []byte("1000")},
+			},
+			wantErr: false,
+		}, {
+			name:    "Type is Integer but data is not",
+			args:    args{bufio.NewReader(strings.NewReader(":n\r\n"))},
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "PING command",
 			args: args{bufio.NewReader(strings.NewReader("*1\r\n$4\r\nping\r\n"))},
 			want: []RESP{

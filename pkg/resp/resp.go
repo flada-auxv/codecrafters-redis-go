@@ -88,9 +88,14 @@ func Parse(s *bufio.Reader) ([]RESP, error) {
 		}}, nil
 
 	case RESPInteger:
+		data := rawLine[1 : len(rawLine)-len(newLine)]
+		_, err := strconv.Atoi(string(data))
+		if err != nil {
+			return nil, errors.New("ERR Invalid RESP format (Integer): Cannot be casted as an Integer")
+		}
 		return []RESP{{
 			Count: -1,
-			Data:  rawLine[1 : len(rawLine)-len(newLine)],
+			Data:  data,
 			Type:  RESPInteger,
 		}}, nil
 
