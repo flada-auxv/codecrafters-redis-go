@@ -66,7 +66,16 @@ func (c *CmdSetFactory) CreateCmd(cmdCtx CmdCtx, args []resp.RESP) (*CmdSet, err
 			opts.Expiration = px
 			i = i + 2
 		case "EX":
-			// TODO:
+			v := respOpts[i+1]
+			if v.Type != resp.RESPInteger {
+				return nil, errors.New("ERR invalid argument type for SET")
+			}
+			ex, err := strconv.Atoi(string(v.Data))
+			if err != nil {
+				return nil, errors.New("ERR invalid argument type for SET")
+			}
+			opts.Expiration = ex * 1000
+			i = i + 2
 		default:
 			return nil, errors.New("ERR invalid argument for SET")
 		}
