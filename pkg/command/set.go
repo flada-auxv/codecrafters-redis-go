@@ -59,7 +59,6 @@ func (c *CmdSetFactory) CreateCmd(cmdCtx CmdCtx, args []resp.RESP) (*CmdSet, err
 			if v.Type != resp.RESPInteger {
 				return nil, errors.New("ERR invalid argument type for SET")
 			}
-			// TODO: Shouldn't it be checked when parsing to RESP objects...?
 			px, err := strconv.Atoi(string(v.Data))
 			if err != nil {
 				return nil, errors.New("ERR invalid argument type for SET")
